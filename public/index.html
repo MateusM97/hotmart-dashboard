@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Hotmart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <span class="logo-text">HotDash</span>
+      </div>
+      <div class="header-meta">
+        <span id="last-updated" class="meta-text">—</span>
+        <span class="meta-dot"></span>
+        <span id="total-records" class="meta-text">—</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="status-badge" class="status-badge">
+        <span class="status-dot"></span>
+        <span class="status-text">Conectando...</span>
+      </div>
+      <button id="btn-refresh" class="btn-refresh" onclick="refreshData()">
+        <svg id="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+        Atualizar Dados
+      </button>
+    </div>
+  </header>
+
+  <!-- LOADING STATE -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p class="loading-title">Buscando histórico completo</p>
+      <p class="loading-sub" id="loading-msg">Conectando à API Hotmart...</p>
+    </div>
+  </div>
+
+  <!-- ERROR STATE -->
+  <div id="error-screen" class="error-screen hidden">
+    <div class="error-content">
+      <span class="error-icon">⚠</span>
+      <h2>Erro ao carregar dados</h2>
+      <p id="error-msg">—</p>
+      <div class="error-hint">
+        <p>Verifique seu arquivo <code>.env</code>:</p>
+        <pre>HOTMART_TOKEN=seu_token_aqui
+HOTMART_ENV=production</pre>
+      </div>
+      <button class="btn-refresh" onclick="loadData()">Tentar novamente</button>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <main id="main-content" class="main hidden">
+
+    <!-- KPI CARDS -->
+    <section class="kpi-grid">
+      <div class="kpi-card kpi-accent">
+        <div class="kpi-label">Receita Total (BRL)</div>
+        <div class="kpi-value" id="kpi-revenue">R$ —</div>
+        <div class="kpi-sub" id="kpi-revenue-usd"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Total de Vendas</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub">transações</div>
+      </div>
+      <div class="kpi-card kpi-green">
+        <div class="kpi-label">Vendas Aprovadas</div>
+        <div class="kpi-value" id="kpi-approved">—</div>
+        <div class="kpi-bar-wrap"><div class="kpi-bar" id="kpi-approved-bar"></div></div>
+      </div>
+      <div class="kpi-card kpi-red">
+        <div class="kpi-label">Reembolsos</div>
+        <div class="kpi-value" id="kpi-refunded">—</div>
+        <div class="kpi-bar-wrap"><div class="kpi-bar" id="kpi-refunded-bar"></div></div>
+      </div>
+    </section>
+
+    <!-- CHARTS ROW 1 -->
+    <section class="charts-row">
+      <div class="chart-card chart-wide">
+        <div class="chart-header">
+          <h3>Vendas por Mês</h3>
+          <span class="chart-tag">histórico</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-monthly-sales"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Status das Vendas</h3>
+          <span class="chart-tag">distribuição</span>
+        </div>
+        <div class="chart-body chart-body-sm">
+          <canvas id="chart-status"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHARTS ROW 2 -->
+    <section class="charts-row">
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Faturamento Mensal (BRL)</h3>
+          <span class="chart-tag">receita</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-revenue"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Formas de Pagamento</h3>
+          <span class="chart-tag">distribuição</span>
+        </div>
+        <div class="chart-body chart-body-sm">
+          <canvas id="chart-payment"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHARTS ROW 3 -->
+    <section class="charts-row charts-row-single">
+      <div class="chart-card chart-full">
+        <div class="chart-header">
+          <h3>Vendas — Últimos 30 Dias</h3>
+          <span class="chart-tag">diário</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-daily"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOP PRODUCTS TABLE -->
+    <section class="table-section">
+      <div class="table-header">
+        <h3>Top Produtos por Vendas</h3>
+        <span class="chart-tag">ranking</span>
+      </div>
+      <div class="table-wrap">
+        <table class="products-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Produto</th>
+              <th>Vendas</th>
+              <th>Receita (BRL)</th>
+              <th>Participação</th>
+            </tr>
+          </thead>
+          <tbody id="products-table-body">
+            <tr><td colspan="5" class="table-empty">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
